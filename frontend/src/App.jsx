@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import "./App.css";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -1046,37 +1047,48 @@ export default function App() {
   const isChairman = !!gameState && gameState.chairman_id === playerName;
 
   if (screen === "landing") {
-    return <LandingScreen onCreateRoom={createRoom} onJoinRoom={joinRoom} error={connError} />;
+    return (
+      <>
+        <LandingScreen onCreateRoom={createRoom} onJoinRoom={joinRoom} error={connError} />
+        <Analytics />
+      </>
+    );
   }
 
   if (screen === "lobby") {
     return (
-      <LobbyScreen
-        roomCode={roomCode}
-        playerName={playerName}
-        isChairman={isChairman}
-        gameState={gameState}
-        onStart={startGame}
-        deckCount={deckCount}
-        chatMessages={chatMessages}
-        onChatSend={sendChat}
-        onProposeRule={proposeRule}
-        onReviewRule={reviewRule}
-        onTransferChairman={transferChairman}
-        onToggleCountdown={toggleCountdown}
-      />
+      <>
+        <LobbyScreen
+          roomCode={roomCode}
+          playerName={playerName}
+          isChairman={isChairman}
+          gameState={gameState}
+          onStart={startGame}
+          deckCount={deckCount}
+          chatMessages={chatMessages}
+          onChatSend={sendChat}
+          onProposeRule={proposeRule}
+          onReviewRule={reviewRule}
+          onTransferChairman={transferChairman}
+          onToggleCountdown={toggleCountdown}
+        />
+        <Analytics />
+      </>
     );
   }
 
   return (
-    <TableScreen
-      gameState={gameState}
-      playerName={playerName}
-      onSend={send}
-      actionError={actionError}
-      onClearError={() => setActionError(null)}
-      chatMessages={chatMessages}
-      onChatSend={sendChat}
-    />
+    <>
+      <TableScreen
+        gameState={gameState}
+        playerName={playerName}
+        onSend={send}
+        actionError={actionError}
+        onClearError={() => setActionError(null)}
+        chatMessages={chatMessages}
+        onChatSend={sendChat}
+      />
+      <Analytics />
+    </>
   );
 }
