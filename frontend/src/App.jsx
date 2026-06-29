@@ -656,6 +656,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
     countdown_enabled: countdownEnabled = true,
     draw_pile_size: drawPileSize = 0,
     discard_pile: discardPile = [],
+    full_turn_card: fullTurnCard = null,
   } = gameState;
 
   const currentTurnId = player_order[current_turn_index];
@@ -793,6 +794,19 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
           )}
 
           {active_vote_tally && <VoteTallyBar tally={active_vote_tally} />}
+
+          {fullTurnCard && (
+            <div className="full-turn-banner">
+              <span className="full-turn-label">Full Turn</span>
+              <span className="full-turn-body">
+                Everyone passed —{" "}
+                <span className={`full-turn-card ${isRed(fullTurnCard.suit) ? "red" : "black"}`}>
+                  {fullTurnCard.rank}{SUIT_SYMBOL[fullTurnCard.suit] ?? fullTurnCard.suit}
+                </span>
+                {" "}flipped onto the discard pile
+              </span>
+            </div>
+          )}
 
           {/* ── Your fanned hand ── */}
           <section

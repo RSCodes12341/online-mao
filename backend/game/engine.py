@@ -152,6 +152,8 @@ class GameRoom:
         self.rejected_log: List[dict] = []
         self.penalties: Dict[str, PenaltyRecord] = {}
         self.countdown_enabled: bool = True
+        self.passes_this_round: int = 0
+        self.full_turn_card: Optional[Card] = None
 
     # ------------------------------------------------------------------
     # Player management
@@ -221,6 +223,8 @@ class GameRoom:
             raise InvalidPlay(
                 f"{card} cannot be played on {self.top_card} (suit or rank must match)"
             )
+        self.passes_this_round = 0
+        self.full_turn_card = None
         player.hand.remove(card)
         self.deck.discard(card)
         if not player.hand:
@@ -234,6 +238,8 @@ class GameRoom:
             raise InvalidPlay("Game is not in progress")
         if player_id != self.current_player_id:
             raise InvalidPlay(f"It is not {player_id}'s turn")
+        self.passes_this_round = 0
+        self.full_turn_card = None
         card = self.deck.draw()
         self.players[player_id].hand.append(card)
         return card
@@ -244,6 +250,8 @@ class GameRoom:
             raise InvalidPlay("Game is not in progress")
         if player_id != self.current_player_id:
             raise InvalidPlay(f"It is not {player_id}'s turn")
+        self.passes_this_round = 0
+        self.full_turn_card = None
         card = self.deck.draw()
         self.players[player_id].hand.append(card)
         self._advance_turn()
@@ -254,12 +262,21 @@ class GameRoom:
             raise InvalidPlay("Only the chairman can change the countdown setting")
         self.countdown_enabled = enabled
 
-    def pass_turn(self, player_id: str) -> None:
+    def pass_turn(self, player_id: str) -> bool:
+        """Pass the current turn. Returns True if this triggered a full-turn event."""
         if self.state != "in_progress":
             raise InvalidPlay("Game is not in progress")
         if player_id != self.current_player_id:
             raise InvalidPlay(f"It is not {player_id}'s turn")
+        self.passes_this_round += 1
         self._advance_turn()
+        if self.passes_this_round >= len(self.player_order):
+            self.passes_this_round = 0
+            flipped = self.deck.draw()
+            self.deck.discard(flipped)
+            self.full_turn_card = flipped
+            return True
+        return False
 
     def _advance_turn(self) -> None:
         self.current_turn_index = (
@@ -616,4 +633,5 @@ class GameRoom:
             "countdown_enabled": self.countdown_enabled,
             "draw_pile_size": len(self.deck.draw_pile) if self.deck else 0,
             "discard_pile": [c.to_dict() for c in self.deck.discard_pile] if self.deck else [],
+            "full_turn_card": self.full_turn_card.to_dict() if self.full_turn_card else None,
         }
