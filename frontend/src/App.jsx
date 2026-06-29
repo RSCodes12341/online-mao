@@ -662,6 +662,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
   const currentTurnId = player_order[current_turn_index];
   const isMyTurn = currentTurnId === playerName;
   const finished = state === "finished";
+  const pendingWin = state === "pending_win";
   const isChairman = chairman_id === playerName;
   const me = players[playerName] ?? {};
   const myHand = me.hand ?? [];
@@ -678,7 +679,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
   useEffect(() => { sendClearRef.current = sendClear; });
 
   useEffect(() => {
-    if (!isMyTurn || finished || !countdownEnabled) { setCountdown(null); return; }
+    if (!isMyTurn || finished || pendingWin || !countdownEnabled) { setCountdown(null); return; }
     let remaining = 5;
     setCountdown(5);
     const id = setInterval(() => {
@@ -707,14 +708,16 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
       {/* ── Header ── */}
       <header className="table-header">
         <span className="room-tag">{room_id} · {direction === 1 ? "CW ↻" : "CCW ↺"}</span>
-        <span className={`turn-label ${isMyTurn && !finished ? "my-turn" : ""}`}>
+        <span className={`turn-label ${isMyTurn && !finished && !pendingWin ? "my-turn" : ""}`}>
           {finished
             ? `${winnerName === me.display_name ? "You" : winnerName} won!`
+            : pendingWin
+            ? `${winnerName === me.display_name ? "You are" : `${winnerName} is`} claiming a win…`
             : isMyTurn
             ? "Your turn!"
             : `${players[currentTurnId]?.display_name ?? currentTurnId}'s turn`}
         </span>
-        {isMyTurn && !finished && countdown !== null && !isPaused && countdownEnabled && (
+        {isMyTurn && !finished && !pendingWin && countdown !== null && !isPaused && countdownEnabled && (
           <span className={`countdown-badge${countdown <= 2 ? " countdown-low" : ""}`}>
             {countdown}
           </span>
@@ -795,7 +798,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
 
           {active_vote_tally && <VoteTallyBar tally={active_vote_tally} />}
 
-          {fullTurnCard && (
+          {fullTurnCard && !pendingWin && (
             <div className="full-turn-banner">
               <span className="full-turn-label">Full Turn</span>
               <span className="full-turn-body">
@@ -808,14 +811,32 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
             </div>
           )}
 
+          {pendingWin && (
+            <div className="pending-win-banner">
+              <span className="pending-win-label">Win Claimed</span>
+              <span className="pending-win-body">
+                <strong>{winnerName}</strong> played their last card — awaiting chairman approval
+              </span>
+              {isChairman && (
+                <button
+                  type="button"
+                  className="btn btn-win btn-sm"
+                  onClick={() => onSend({ type: "approve_win" })}
+                >
+                  Approve Win
+                </button>
+              )}
+            </div>
+          )}
+
           {/* ── Your fanned hand ── */}
           <section
-            className={`hand-section ${isMyTurn && !finished ? "hand-my-turn" : ""}`}
+            className={`hand-section ${isMyTurn && !finished && !pendingWin ? "hand-my-turn" : ""}`}
             aria-label="Your hand"
           >
             <div className="hand-label-row">
               <span className="area-label">your hand</span>
-              {isMyTurn && !finished && <span className="your-turn-tag">YOUR TURN</span>}
+              {isMyTurn && !finished && !pendingWin && <span className="your-turn-tag">YOUR TURN</span>}
             </div>
             <div className="hand-fan">
               {myHand.length === 0 && !finished ? (
@@ -830,13 +851,13 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
                   return (
                     <div
                       key={`${card.rank}-${card.suit}-${i}`}
-                      className={`card-fan-slot ${isMyTurn && !finished ? "playable-slot" : ""}`}
+                      className={`card-fan-slot ${isMyTurn && !finished && !pendingWin ? "playable-slot" : ""}`}
                       style={{ "--fan-angle": `${ang}deg`, "--fan-y": `${yLift}px`, zIndex: i }}
                     >
                       <PlayingCard
                         rank={card.rank}
                         suit={card.suit}
-                        onClick={isMyTurn && !finished ? () => sendClear({ type: "play_card", card }) : undefined}
+                        onClick={isMyTurn && !finished && !pendingWin ? () => sendClear({ type: "play_card", card }) : undefined}
                       />
                     </div>
                   );
@@ -850,12 +871,12 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
             <button
               type="button"
               className="btn btn-secondary"
-              disabled={!isMyTurn || finished}
+              disabled={!isMyTurn || finished || pendingWin}
               onClick={() => sendClear({ type: "draw_card" })}
             >
               Draw Card
             </button>
-            {!finished && (
+            {!finished && !pendingWin && (
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -865,7 +886,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
                 Pass
               </button>
             )}
-            {!finished && (
+            {!finished && !pendingWin && (
               <button
                 type="button"
                 className="btn btn-penalty"
@@ -874,7 +895,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
                 Penalize
               </button>
             )}
-            {isChairman && !finished && (
+            {isChairman && !finished && !pendingWin && (
               <button
                 type="button"
                 className={`btn btn-sm countdown-toggle${countdownEnabled ? " active" : ""}`}

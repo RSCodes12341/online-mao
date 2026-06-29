@@ -228,7 +228,7 @@ class GameRoom:
         player.hand.remove(card)
         self.deck.discard(card)
         if not player.hand:
-            self.state = "finished"
+            self.state = "pending_win"
             self.winner = player_id
         else:
             self._advance_turn()
@@ -277,6 +277,13 @@ class GameRoom:
             self.full_turn_card = flipped
             return True
         return False
+
+    def approve_win(self, chairman_id: str) -> None:
+        if self.state != "pending_win":
+            raise InvalidPlay("No win is pending approval")
+        if self.chairman_id != chairman_id:
+            raise InvalidPlay("Only the chairman can approve the win")
+        self.state = "finished"
 
     def _advance_turn(self) -> None:
         self.current_turn_index = (

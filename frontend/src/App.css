@@ -1284,6 +1284,32 @@
 .full-turn-card.red   { color: #fca5a5; }
 .full-turn-card.black { color: #e2e8f0; }
 
+/* ── Pending Win banner ── */
+.pending-win-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #1a2e1a;
+  border-top: 2px solid #22c55e;
+  border-bottom: 1px solid #15803d;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.pending-win-label {
+  font-weight: 700;
+  color: #86efac;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pending-win-body {
+  color: #dcfce7;
+  flex: 1;
+  min-width: 0;
+}
+
 /* ============================================================
    Sidebar tabs (chat / penalty log)
    ============================================================ */

@@ -272,6 +272,10 @@ async def _handle_message(
             room.timeout_turn(player_id)
             await _broadcast(room_code)
 
+        elif msg_type == "approve_win":
+            room.approve_win(player_id)
+            await _broadcast(room_code)
+
         elif msg_type == "set_countdown":
             enabled = bool(msg.get("enabled", True))
             room.set_countdown(player_id, enabled)
