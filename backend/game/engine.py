@@ -151,6 +151,7 @@ class GameRoom:
         self.rules: Dict[str, Rule] = {}
         self.rejected_log: List[dict] = []
         self.penalties: Dict[str, PenaltyRecord] = {}
+        self.countdown_enabled: bool = True
 
     # ------------------------------------------------------------------
     # Player management
@@ -237,6 +238,11 @@ class GameRoom:
         self.players[player_id].hand.append(card)
         self._advance_turn()
         return card
+
+    def set_countdown(self, player_id: str, enabled: bool) -> None:
+        if self.chairman_id != player_id:
+            raise InvalidPlay("Only the chairman can change the countdown setting")
+        self.countdown_enabled = enabled
 
     def pass_turn(self, player_id: str) -> None:
         if self.state != "in_progress":
@@ -597,4 +603,7 @@ class GameRoom:
             "pending_judge_ruling": pending_judge_ruling,
             "pending_vote": pending_vote,
             "active_vote_tally": active_vote_tally,
+            "countdown_enabled": self.countdown_enabled,
+            "draw_pile_size": len(self.deck.draw_pile) if self.deck else 0,
+            "discard_pile": [c.to_dict() for c in self.deck.discard_pile] if self.deck else [],
         }

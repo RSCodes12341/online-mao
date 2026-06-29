@@ -376,10 +376,46 @@ function PenaltyLog({ penalties }) {
 }
 
 // ---------------------------------------------------------------------------
-// TableSidebar  (chat / penalty log tabs)
+// DeckPanel  (sidebar tab — play history + draw pile count)
 // ---------------------------------------------------------------------------
 
-function TableSidebar({ chatMessages, onChatSend, penalties }) {
+function DeckPanel({ drawPileSize, discardPile }) {
+  const played = [...discardPile].reverse(); // most recent on top
+  return (
+    <div className="deck-panel">
+      <div className="deck-stats">
+        <span className="deck-stat-label">Draw pile</span>
+        <span className="deck-stat-value">{drawPileSize} card{drawPileSize !== 1 ? "s" : ""}</span>
+        <span className="deck-stat-label" style={{ marginLeft: 12 }}>Played</span>
+        <span className="deck-stat-value">{discardPile.length}</span>
+      </div>
+      {drawPileSize === 0 && (
+        <p className="deck-reshuffle-note">Deck empty — will reshuffle discard pile on next draw.</p>
+      )}
+      <div className="deck-history-label">Played cards (newest first)</div>
+      <div className="deck-history">
+        {played.length === 0 ? (
+          <p className="chat-empty" style={{ padding: "8px 0" }}>No cards played yet.</p>
+        ) : (
+          played.map((c, i) => (
+            <span
+              key={i}
+              className={`deck-card-chip ${c.suit === "hearts" || c.suit === "diamonds" ? "red" : "black"}`}
+            >
+              {c.rank}{SUIT_SYMBOL[c.suit] ?? c.suit}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TableSidebar  (chat / penalty log / deck tabs)
+// ---------------------------------------------------------------------------
+
+function TableSidebar({ chatMessages, onChatSend, penalties, drawPileSize, discardPile }) {
   const [tab, setTab] = useState("chat");
   const unresolved = penalties.filter(
     (p) => p.status !== "accepted" && p.status !== "upheld" && p.status !== "overturned"
@@ -403,11 +439,20 @@ function TableSidebar({ chatMessages, onChatSend, penalties }) {
           Penalties{penalties.length > 0 ? ` (${penalties.length})` : ""}
           {unresolved > 0 && <span className="sidebar-tab-dot" />}
         </button>
+        <button
+          type="button"
+          className={`sidebar-tab ${tab === "deck" ? "active" : ""}`}
+          onClick={() => setTab("deck")}
+        >
+          Deck
+        </button>
       </div>
       {tab === "chat" ? (
         <ChatPanel messages={chatMessages} onSend={onChatSend} />
-      ) : (
+      ) : tab === "log" ? (
         <PenaltyLog penalties={penalties} />
+      ) : (
+        <DeckPanel drawPileSize={drawPileSize} discardPile={discardPile} />
       )}
     </div>
   );
@@ -589,6 +634,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
   const [showPenalizeModal, setShowPenalizeModal] = useState(false);
   const [countdown, setCountdown] = useState(null);
   const sendClearRef = useRef(null);
+  const pausedRef = useRef(false);
 
   if (!gameState) return <div className="fullscreen-center">Connecting…</div>;
 
@@ -596,25 +642,35 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
     state, player_order, current_turn_index, top_card, players, room_id, direction, winner,
     chairman_id, rules = [], penalties = [],
     pending_penalty_response, pending_judge_ruling, pending_vote, active_vote_tally,
+    countdown_enabled: countdownEnabled = true,
+    draw_pile_size: drawPileSize = 0,
+    discard_pile: discardPile = [],
   } = gameState;
 
   const currentTurnId = player_order[current_turn_index];
   const isMyTurn = currentTurnId === playerName;
   const finished = state === "finished";
+  const isChairman = chairman_id === playerName;
   const me = players[playerName] ?? {};
   const myHand = me.hand ?? [];
   const winnerName = winner ? (players[winner]?.display_name ?? winner) : null;
   const otherPlayers = player_order.filter((id) => id !== playerName);
+
+  // Pause countdown when penalize modal is open or player has an active penalty to respond to
+  const isPaused = showPenalizeModal || !!pending_penalty_response;
+  pausedRef.current = isPaused;
+
   const sendClear = useCallback((msg) => { onClearError(); onSend(msg); }, [onSend, onClearError]);
 
   // Keep a ref so the countdown interval always calls the latest sendClear
   useEffect(() => { sendClearRef.current = sendClear; });
 
   useEffect(() => {
-    if (!isMyTurn || finished) { setCountdown(null); return; }
+    if (!isMyTurn || finished || !countdownEnabled) { setCountdown(null); return; }
     let remaining = 5;
     setCountdown(5);
     const id = setInterval(() => {
+      if (pausedRef.current) return; // paused — don't decrement
       remaining -= 1;
       if (remaining <= 0) {
         clearInterval(id);
@@ -625,7 +681,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [currentTurnId, isMyTurn, finished]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTurnId, isMyTurn, finished, countdownEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const penalize    = (tId, reason, c) => onSend({ type: "penalize",       target_player_id: tId, reason, cards: c });
   const respondP    = (pId, resp)     => onSend({ type: "respond_penalty", penalty_id: pId, response: resp });
@@ -646,8 +702,8 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
             ? "Your turn!"
             : `${players[currentTurnId]?.display_name ?? currentTurnId}'s turn`}
         </span>
-        {isMyTurn && !finished && countdown !== null && (
-          <span className={`countdown-badge${countdown <= 2 ? " countdown-urgent" : ""}`}>
+        {isMyTurn && !finished && countdown !== null && !isPaused && countdownEnabled && (
+          <span className={`countdown-badge${countdown <= 2 ? " countdown-low" : ""}`}>
             {countdown}
           </span>
         )}
@@ -793,6 +849,16 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
                 Penalize
               </button>
             )}
+            {isChairman && !finished && (
+              <button
+                type="button"
+                className={`btn btn-sm countdown-toggle${countdownEnabled ? " active" : ""}`}
+                title={countdownEnabled ? "5s timer is on — click to turn off" : "5s timer is off — click to turn on"}
+                onClick={() => onSend({ type: "set_countdown", enabled: !countdownEnabled })}
+              >
+                ⏱ {countdownEnabled ? "On" : "Off"}
+              </button>
+            )}
           </div>
 
           {actionError && (
@@ -804,7 +870,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
 
         </div>
 
-        <TableSidebar chatMessages={chatMessages} onChatSend={onChatSend} penalties={penalties} />
+        <TableSidebar chatMessages={chatMessages} onChatSend={onChatSend} penalties={penalties} drawPileSize={drawPileSize} discardPile={discardPile} />
       </div>
 
       {finished && (

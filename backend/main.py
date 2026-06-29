@@ -268,6 +268,11 @@ async def _handle_message(
             room.pass_turn(player_id)
             await _broadcast(room_code)
 
+        elif msg_type == "set_countdown":
+            enabled = bool(msg.get("enabled", True))
+            room.set_countdown(player_id, enabled)
+            await _broadcast(room_code)
+
         elif msg_type == "respond_penalty":
             penalty_id = str(msg.get("penalty_id", ""))
             response = str(msg.get("response", ""))
