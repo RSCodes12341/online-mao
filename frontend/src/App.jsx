@@ -568,10 +568,11 @@ function LandingScreen({ onCreateRoom, onJoinRoom, error }) {
 // LobbyScreen
 // ---------------------------------------------------------------------------
 
-function LobbyScreen({ roomCode, playerName, isChairman, gameState, onStart, deckCount, chatMessages, onChatSend, onProposeRule, onReviewRule, onTransferChairman }) {
+function LobbyScreen({ roomCode, playerName, isChairman, gameState, onStart, deckCount, chatMessages, onChatSend, onProposeRule, onReviewRule, onTransferChairman, onToggleCountdown }) {
   const players = gameState ? Object.values(gameState.players) : [];
   const rules = gameState?.rules ?? [];
   const chairmanId = gameState?.chairman_id ?? null;
+  const countdownEnabled = gameState?.countdown_enabled ?? true;
   const canStart = isChairman && players.length >= 2;
 
   const copyCode = () => navigator.clipboard?.writeText(roomCode).catch(() => {});
@@ -613,7 +614,17 @@ function LobbyScreen({ roomCode, playerName, isChairman, gameState, onStart, dec
         <div className="lobby-actions">
           {players.length < 2 && <p className="muted">Need at least 2 players to start.</p>}
           <p className="muted" style={{ fontSize: 13 }}>{deckCount} deck{deckCount !== 1 ? "s" : ""} · 7 cards per player</p>
-          <button type="button" className="btn btn-primary btn-lg" disabled={!canStart} onClick={onStart}>Start Game</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button type="button" className="btn btn-primary btn-lg" disabled={!canStart} onClick={onStart}>Start Game</button>
+            <button
+              type="button"
+              className={`btn btn-ghost btn-sm countdown-toggle${countdownEnabled ? " active" : ""}`}
+              title={countdownEnabled ? "5s turn timer is on — click to disable" : "5s turn timer is off — click to enable"}
+              onClick={onToggleCountdown}
+            >
+              ⏱ {countdownEnabled ? "Timer on" : "Timer off"}
+            </button>
+          </div>
         </div>
       ) : (
         <p className="muted">Waiting for the chairman to start the game…</p>
@@ -675,7 +686,7 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
       if (remaining <= 0) {
         clearInterval(id);
         setCountdown(null);
-        sendClearRef.current({ type: "draw_card" });
+        sendClearRef.current({ type: "timeout_turn" });
       } else {
         setCountdown(remaining);
       }
@@ -993,6 +1004,7 @@ export default function App() {
   const proposeRule      = useCallback((name) => send({ type: "propose_rule", name }), [send]);
   const reviewRule       = useCallback((rId, dec) => send({ type: "review_rule", rule_id: rId, decision: dec }), [send]);
   const transferChairman = useCallback((tId) => send({ type: "transfer_chairman", target_player_id: tId }), [send]);
+  const toggleCountdown  = useCallback(() => send({ type: "set_countdown", enabled: !(gameState?.countdown_enabled ?? true) }), [send, gameState]);
 
   useEffect(() => () => wsRef.current?.close(), []);
 
@@ -1016,6 +1028,7 @@ export default function App() {
         onProposeRule={proposeRule}
         onReviewRule={reviewRule}
         onTransferChairman={transferChairman}
+        onToggleCountdown={toggleCountdown}
       />
     );
   }

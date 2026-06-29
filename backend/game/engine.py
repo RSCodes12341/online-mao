@@ -236,6 +236,16 @@ class GameRoom:
             raise InvalidPlay(f"It is not {player_id}'s turn")
         card = self.deck.draw()
         self.players[player_id].hand.append(card)
+        return card
+
+    def timeout_turn(self, player_id: str) -> Card:
+        """Countdown expired: draw a card and end the turn."""
+        if self.state != "in_progress":
+            raise InvalidPlay("Game is not in progress")
+        if player_id != self.current_player_id:
+            raise InvalidPlay(f"It is not {player_id}'s turn")
+        card = self.deck.draw()
+        self.players[player_id].hand.append(card)
         self._advance_turn()
         return card
 
