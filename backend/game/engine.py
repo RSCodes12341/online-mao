@@ -111,8 +111,7 @@ class PenaltyRecord:
     id: str
     from_player: str
     to_player: str
-    rule_id: str
-    rule_name: str          # denormalised so log stays readable after rule edits
+    reason: str             # free-form reason (can be stated aloud instead)
     cards: int              # how many cards were given at issue time
     card_objects: List[Card]  # server-side only — used for reversal on overturn
     status: str             # "issued" | "accepted" | "under_review" | "upheld" | "overturned"
@@ -127,8 +126,7 @@ class PenaltyRecord:
             "id": self.id,
             "from_player": self.from_player,
             "to_player": self.to_player,
-            "rule_id": self.rule_id,
-            "rule_name": self.rule_name,
+            "reason": self.reason,
             "cards": self.cards,
             "status": self.status,
             "created_at": self.created_at,
@@ -240,6 +238,13 @@ class GameRoom:
         self._advance_turn()
         return card
 
+    def pass_turn(self, player_id: str) -> None:
+        if self.state != "in_progress":
+            raise InvalidPlay("Game is not in progress")
+        if player_id != self.current_player_id:
+            raise InvalidPlay(f"It is not {player_id}'s turn")
+        self._advance_turn()
+
     def _advance_turn(self) -> None:
         self.current_turn_index = (
             self.current_turn_index + self.direction
@@ -328,7 +333,7 @@ class GameRoom:
     # ------------------------------------------------------------------
 
     def issue_penalty(
-        self, from_player: str, to_player: str, rule_id: str, cards: int = 1
+        self, from_player: str, to_player: str, reason: str = "", cards: int = 1
     ) -> PenaltyRecord:
         if self.state != "in_progress":
             raise InvalidPlay("Penalties can only be issued during an active game")
@@ -338,14 +343,10 @@ class GameRoom:
             raise ValueError(f"Target player '{to_player}' not in room")
         if from_player == to_player:
             raise InvalidPlay("Cannot penalize yourself")
-        if rule_id not in self.rules:
-            raise InvalidPlay("Rule not found")
-        if self.rules[rule_id].status != "active":
-            raise InvalidPlay("Can only cite an active rule")
         if cards < 1:
             raise InvalidPlay("Must give at least 1 card")
 
-        rule_name = self.rules[rule_id].name
+        reason_display = f'"{reason}"' if reason else "(no reason stated)"
 
         # Cards are given immediately — this is the defining behaviour of the system.
         drawn: List[Card] = []
@@ -360,15 +361,14 @@ class GameRoom:
             id=penalty_id,
             from_player=from_player,
             to_player=to_player,
-            rule_id=rule_id,
-            rule_name=rule_name,
+            reason=reason,
             cards=cards,
             card_objects=drawn,
             status="issued",
             created_at=ts,
             resolved_at=None,
             log=[
-                f"{from_player} penalized {to_player} — cited \"{rule_name}\" "
+                f"{from_player} penalized {to_player} — {reason_display} "
                 f"({cards} card{'s' if cards != 1 else ''} added to hand immediately)"
             ],
             votes={},
@@ -575,7 +575,7 @@ class GameRoom:
                         ),
                         "total_eligible": len(p.eligible_voters),
                         "total_voted": len(p.votes),
-                        "rule_name": p.rule_name,
+                        "reason": p.reason,
                         "from_player": p.from_player,
                         "to_player": p.to_player,
                     }

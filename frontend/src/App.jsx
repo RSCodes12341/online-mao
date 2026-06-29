@@ -173,18 +173,17 @@ function RulesPanel({ rules, isChairman, onProposeRule, onReviewRule }) {
 // PenalizeModal
 // ---------------------------------------------------------------------------
 
-function PenalizeModal({ players, playerName, rules, onSubmit, onClose }) {
-  const activeRules = rules.filter((r) => r.status === "active");
+function PenalizeModal({ players, playerName, onSubmit, onClose }) {
   const targets = Object.values(players).filter((p) => p.id !== playerName);
 
   const [targetId, setTargetId] = useState(targets[0]?.id ?? "");
-  const [ruleId, setRuleId] = useState(activeRules[0]?.id ?? "");
+  const [reason, setReason] = useState("");
   const [cards, setCards] = useState(1);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!targetId || !ruleId) return;
-    onSubmit(targetId, ruleId, cards);
+    if (!targetId) return;
+    onSubmit(targetId, reason.trim(), cards);
     onClose();
   };
 
@@ -196,7 +195,7 @@ function PenalizeModal({ players, playerName, rules, onSubmit, onClose }) {
           <button type="button" className="btn-close" onClick={onClose}>×</button>
         </div>
         <p className="modal-note">
-          The target receives the card(s) immediately, then may accept or contest.
+          Cards are given immediately. The target may accept or contest.
         </p>
         <form onSubmit={handleSubmit} className="form-stack">
           <label>
@@ -210,21 +209,21 @@ function PenalizeModal({ players, playerName, rules, onSubmit, onClose }) {
             </select>
           </label>
           <label>
-            Rule violated
-            <select value={ruleId} onChange={(e) => setRuleId(e.target.value)} className="form-select">
-              {activeRules.length === 0
-                ? <option value="">No active rules</option>
-                : activeRules.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-            </select>
+            Reason <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional — state it aloud if preferred)</span>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. didn't say Mao"
+              maxLength={100}
+            />
           </label>
           <label>
             Cards to give
             <input
               type="number"
               min={1}
-              max={10}
+              max={20}
               value={cards}
               onChange={(e) => setCards(Math.max(1, Number(e.target.value)))}
             />
@@ -233,7 +232,7 @@ function PenalizeModal({ players, playerName, rules, onSubmit, onClose }) {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!targetId || activeRules.length === 0}
+              disabled={!targetId}
             >
               Issue Penalty
             </button>
@@ -251,11 +250,12 @@ function PenalizeModal({ players, playerName, rules, onSubmit, onClose }) {
 
 function PenaltyResponseBanner({ penalty, players, onRespond }) {
   const fromName = players[penalty.from_player]?.display_name ?? penalty.from_player;
+  const reasonText = penalty.reason ? <em>"{penalty.reason}"</em> : <em>(no reason stated)</em>;
   return (
     <div className="penalty-banner penalty-banner-target">
       <div className="penalty-banner-title">You received a penalty!</div>
       <p className="penalty-banner-body">
-        <strong>{fromName}</strong> cited rule <em>"{penalty.rule_name}"</em> —{" "}
+        <strong>{fromName}</strong> penalized you — {reasonText} —{" "}
         <strong>{penalty.cards} card{penalty.cards !== 1 ? "s" : ""}</strong> added to your hand.
       </p>
       <div className="penalty-banner-actions">
@@ -277,13 +277,13 @@ function PenaltyResponseBanner({ penalty, players, onRespond }) {
 function JudgeRulingBanner({ penalty, players, onJudge }) {
   const fromName = players[penalty.from_player]?.display_name ?? penalty.from_player;
   const toName = players[penalty.to_player]?.display_name ?? penalty.to_player;
+  const reasonText = penalty.reason ? <em>"{penalty.reason}"</em> : <em>(no reason stated)</em>;
   return (
     <div className="penalty-banner penalty-banner-judge">
       <div className="penalty-banner-title">Chairman ruling required</div>
       <p className="penalty-banner-body">
-        <strong>{fromName}</strong> penalized <strong>{toName}</strong> for{" "}
-        <em>"{penalty.rule_name}"</em> ({penalty.cards} card{penalty.cards !== 1 ? "s" : ""}).{" "}
-        The target contested it.
+        <strong>{fromName}</strong> penalized <strong>{toName}</strong> — {reasonText}{" "}
+        ({penalty.cards} card{penalty.cards !== 1 ? "s" : ""}). The target contested it.
       </p>
       <div className="penalty-banner-actions">
         <button type="button" className="btn btn-primary btn-sm" onClick={() => onJudge(penalty.id, "uphold")}>
@@ -304,12 +304,12 @@ function JudgeRulingBanner({ penalty, players, onJudge }) {
 function VoteBanner({ penalty, players, onVote }) {
   const fromName = players[penalty.from_player]?.display_name ?? penalty.from_player;
   const toName = players[penalty.to_player]?.display_name ?? penalty.to_player;
+  const reasonText = penalty.reason ? <em>"{penalty.reason}"</em> : <em>(no reason stated)</em>;
   return (
     <div className="penalty-banner penalty-banner-vote">
       <div className="penalty-banner-title">Popular vote — your input needed</div>
       <p className="penalty-banner-body">
-        <strong>{fromName}</strong> (Chairman) penalized <strong>{toName}</strong> for{" "}
-        <em>"{penalty.rule_name}"</em>. The target contested it.
+        <strong>{fromName}</strong> (Chairman) penalized <strong>{toName}</strong> — {reasonText}. The target contested it.
       </p>
       <div className="penalty-banner-actions">
         <button type="button" className="btn btn-primary btn-sm" onClick={() => onVote(penalty.id, "uphold")}>
@@ -328,12 +328,12 @@ function VoteBanner({ penalty, players, onVote }) {
 // ---------------------------------------------------------------------------
 
 function VoteTallyBar({ tally }) {
-  const { uphold, overturn, total_eligible, total_voted, rule_name, from_player, to_player } = tally;
+  const { uphold, overturn, total_eligible, total_voted, reason, from_player, to_player } = tally;
   return (
     <div className="vote-tally-bar">
       <span className="vote-tally-label">
-        Vote: <strong>{from_player}</strong> vs <strong>{to_player}</strong>{" "}
-        · <em>{rule_name}</em>
+        Vote: <strong>{from_player}</strong> vs <strong>{to_player}</strong>
+        {reason && <> · <em>"{reason}"</em></>}
       </span>
       <span className="vote-tally-counts">
         <span className="vote-uphold">{uphold} uphold</span>
@@ -365,7 +365,7 @@ function PenaltyLog({ penalties }) {
             <span className="penalty-to">{p.to_player}</span>
             <span className={`penalty-status-badge status-${p.status}`}>{p.status}</span>
           </div>
-          <div className="penalty-rule-name">"{p.rule_name}" · {p.cards}×</div>
+          <div className="penalty-rule-name">{p.reason ? `"${p.reason}"` : "(no reason stated)"} · {p.cards}×</div>
           {p.log.map((entry, i) => (
             <div key={i} className="penalty-log-line">{entry}</div>
           ))}
@@ -603,11 +603,9 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
   const myHand = me.hand ?? [];
   const winnerName = winner ? (players[winner]?.display_name ?? winner) : null;
   const otherPlayers = player_order.filter((id) => id !== playerName);
-  const activeRules = rules.filter((r) => r.status === "active");
-
   const sendClear = useCallback((msg) => { onClearError(); onSend(msg); }, [onSend, onClearError]);
 
-  const penalize    = (tId, rId, c)  => onSend({ type: "penalize",        target_player_id: tId, rule_id: rId, cards: c });
+  const penalize    = (tId, reason, c) => onSend({ type: "penalize",       target_player_id: tId, reason, cards: c });
   const respondP    = (pId, resp)     => onSend({ type: "respond_penalty", penalty_id: pId, response: resp });
   const judgeP      = (pId, ruling)   => onSend({ type: "judge_penalty",   penalty_id: pId, ruling });
   const voteP       = (pId, vote)     => onSend({ type: "vote_penalty",    penalty_id: pId, vote });
@@ -752,10 +750,18 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
             {!finished && (
               <button
                 type="button"
+                className="btn btn-ghost"
+                disabled={!isMyTurn}
+                onClick={() => sendClear({ type: "pass_turn" })}
+              >
+                Pass
+              </button>
+            )}
+            {!finished && (
+              <button
+                type="button"
                 className="btn btn-penalty"
                 onClick={() => setShowPenalizeModal(true)}
-                disabled={activeRules.length === 0}
-                title={activeRules.length === 0 ? "No active rules to cite" : "Issue a penalty"}
               >
                 Penalize
               </button>
@@ -786,7 +792,6 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
         <PenalizeModal
           players={players}
           playerName={playerName}
-          rules={rules}
           onSubmit={penalize}
           onClose={() => setShowPenalizeModal(false)}
         />

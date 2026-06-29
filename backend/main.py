@@ -256,12 +256,16 @@ async def _handle_message(
 
         elif msg_type == "penalize":
             target_id = str(msg.get("target_player_id", ""))
-            rule_id = str(msg.get("rule_id", ""))
+            reason = str(msg.get("reason", "")).strip()
             try:
                 cards = max(1, int(msg.get("cards", 1)))
             except (ValueError, TypeError):
                 cards = 1
-            room.issue_penalty(player_id, target_id, rule_id, cards)
+            room.issue_penalty(player_id, target_id, reason, cards)
+            await _broadcast(room_code)
+
+        elif msg_type == "pass_turn":
+            room.pass_turn(player_id)
             await _broadcast(room_code)
 
         elif msg_type == "respond_penalty":
