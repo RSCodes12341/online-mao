@@ -9,7 +9,7 @@ Two free-tier services: **Render** for the backend (Python/FastAPI/WebSocket) an
 If you haven't already:
 
 ```bash
-cd /Users/ronithbalusani/Documents/online-mau
+cd /Users/ronithbalusani/Documents/online-mao
 git init          # if not already a repo
 git add .
 git commit -m "Initial commit"
