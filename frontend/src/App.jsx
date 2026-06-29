@@ -872,7 +872,7 @@ export default function App() {
         body: JSON.stringify({ initial_rules: initialRules ?? [] }),
       });
     } catch {
-      setConnError("Cannot reach server — is the backend running on :8000?");
+      setConnError(`Cannot reach server at ${API} — is the backend running?`);
       return;
     }
     if (!resp.ok) { setConnError("Server error creating room."); return; }
