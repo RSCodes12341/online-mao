@@ -1048,6 +1048,35 @@
 }
 
 /* ============================================================
+   Countdown badge
+   ============================================================ */
+
+.countdown-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.countdown-urgent {
+  background: #dc2626;
+  animation: countdown-throb 0.4s ease-in-out infinite;
+}
+
+@keyframes countdown-throb {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+  50%       { transform: scale(1.18); box-shadow: 0 0 0 7px rgba(220, 38, 38, 0); }
+}
+
+/* ============================================================
    Penalty button
    ============================================================ */
 

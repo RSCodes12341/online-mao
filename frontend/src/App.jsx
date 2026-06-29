@@ -587,6 +587,8 @@ function LobbyScreen({ roomCode, playerName, isChairman, gameState, onStart, dec
 
 function TableScreen({ gameState, playerName, onSend, actionError, onClearError, chatMessages, onChatSend }) {
   const [showPenalizeModal, setShowPenalizeModal] = useState(false);
+  const [countdown, setCountdown] = useState(null);
+  const sendClearRef = useRef(null);
 
   if (!gameState) return <div className="fullscreen-center">Connecting…</div>;
 
@@ -604,6 +606,26 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
   const winnerName = winner ? (players[winner]?.display_name ?? winner) : null;
   const otherPlayers = player_order.filter((id) => id !== playerName);
   const sendClear = useCallback((msg) => { onClearError(); onSend(msg); }, [onSend, onClearError]);
+
+  // Keep a ref so the countdown interval always calls the latest sendClear
+  useEffect(() => { sendClearRef.current = sendClear; });
+
+  useEffect(() => {
+    if (!isMyTurn || finished) { setCountdown(null); return; }
+    let remaining = 5;
+    setCountdown(5);
+    const id = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(id);
+        setCountdown(null);
+        sendClearRef.current({ type: "draw_card" });
+      } else {
+        setCountdown(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [currentTurnId, isMyTurn, finished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const penalize    = (tId, reason, c) => onSend({ type: "penalize",       target_player_id: tId, reason, cards: c });
   const respondP    = (pId, resp)     => onSend({ type: "respond_penalty", penalty_id: pId, response: resp });
@@ -624,6 +646,11 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
             ? "Your turn!"
             : `${players[currentTurnId]?.display_name ?? currentTurnId}'s turn`}
         </span>
+        {isMyTurn && !finished && countdown !== null && (
+          <span className={`countdown-badge${countdown <= 2 ? " countdown-urgent" : ""}`}>
+            {countdown}
+          </span>
+        )}
         <span className="hand-count-badge">{myHand.length} card{myHand.length !== 1 ? "s" : ""}</span>
       </header>
 
