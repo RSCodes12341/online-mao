@@ -922,7 +922,20 @@ function TableScreen({ gameState, playerName, onSend, actionError, onClearError,
       {finished && (
         <div className="win-overlay" role="status">
           <div className="win-card">
-            {winnerName === me.display_name ? "You won — Mao!" : `${winnerName} wins — Mao!`}
+            <div className="win-title">
+              {winnerName === me.display_name ? "You won — Mao!" : `${winnerName} wins — Mao!`}
+            </div>
+            {isChairman ? (
+              <button
+                type="button"
+                className="btn btn-primary btn-lg"
+                onClick={() => onSend({ type: "return_to_lobby" })}
+              >
+                Return to Lobby
+              </button>
+            ) : (
+              <p className="win-waiting">Waiting for the chairman to start a new game…</p>
+            )}
           </div>
         </div>
       )}

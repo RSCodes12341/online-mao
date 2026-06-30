@@ -10,8 +10,21 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
+  --display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+
+  --gold: #d97706;
+  --gold-bg: rgba(217, 119, 6, 0.08);
+  --gold-border: rgba(217, 119, 6, 0.3);
+  --gold-glow: transparent;
+
+  --panel-glass-bg: rgba(255, 255, 255, 0.72);
+  --panel-glass-border: rgba(0, 0, 0, 0.09);
+  --panel-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  --input-bg: #ffffff;
+  --glow-accent: none;
 
   font: 16px/150% var(--sans);
   letter-spacing: 0.1px;
@@ -25,16 +38,31 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
+    --text: #a8aab8;
+    --text-h: #f0eff5;
+    --bg: #0f0d14;
+    --border: #2a2535;
+    --code-bg: #1a1726;
     --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
+    --accent-bg: rgba(192, 132, 252, 0.12);
+    --accent-border: rgba(192, 132, 252, 0.35);
     --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      rgba(0, 0, 0, 0.6) 0 10px 15px -3px, rgba(0, 0, 0, 0.4) 0 4px 6px -2px;
+
+    --gold: #f59e0b;
+    --gold-bg: rgba(245, 158, 11, 0.1);
+    --gold-border: rgba(245, 158, 11, 0.35);
+    --gold-glow: rgba(245, 158, 11, 0.2);
+
+    --panel-glass-bg: rgba(255, 255, 255, 0.03);
+    --panel-glass-border: rgba(192, 132, 252, 0.2);
+    --panel-glass-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 20px 60px rgba(0, 0, 0, 0.55),
+      0 0 80px rgba(109, 40, 217, 0.08);
+
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --glow-accent: 0 0 20px rgba(192, 132, 252, 0.4), 0 0 40px rgba(192, 132, 252, 0.15);
   }
 }
 
